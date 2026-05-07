@@ -5,35 +5,50 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        /^http:\/\/localhost(:\d+)?$/,
+        /^https:\/\/.*\.vercel\.app$/,
+        /^https:\/\/.*\.railway\.app$/,
+      ];
+      if (!origin || allowedOrigins.some((regex) => regex.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Requested-With',
+      'X-HTTP-Method-Override',
+      'x-auth-token',
+    ],
+    exposedHeaders: ['Set-Cookie', 'x-auth-token'],
+    optionsSuccessStatus: 204,
+  });
+
+  app.use((req, res, next) => {
+    console.log(
+      `[Request] Method: ${req.method}, Path: ${req.path}, Body: ${JSON.stringify(req.body)}`,
+    );
+    next();
+  });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
+
   const config = new DocumentBuilder()
     .setTitle('🎬 Movie Marketplace API')
-    .setDescription(
-      `
-## 🎬 Movie Marketplace — API Qo'llanma
-
-Bu **Moviea** loyihasining backend API dokumentatsiyasi.
-
----
-
-### 🗺️ API bo'limlari:
-
-| Bo'lim | Maqsad |
-|--------|--------|
-| 🔓 **Auth** | Kirish va Ro'yxatdan o'tish |
-| 🎬 **Movies** | Kinolar ro'yxati va CRUD |
-| 🛡️ **Admin** | Foydalanuvchilarni boshqarish |
-| 📊 **Dashboard** | Statistika va Kabinet |
-| 👤 **Profile** | Shaxsiy sozlamalar |
-
----
-
-### 👥 Rollar:
-
-- 🛡️ **ADMIN** — To'liq nazorat
-- 🏪 **SELLER** — Kino egalari / Distribyutorlar
-- 👤 **USER** — Tomoshabinlar
-      `,
-    )
+    .setDescription('🎬 Moviea loyihasining backend API dokumentatsiyasi')
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'Authorization', in: 'header' },
@@ -42,13 +57,13 @@ Bu **Moviea** loyihasining backend API dokumentatsiyasi.
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: '🎬 Movie API Docs',
-    swaggerOptions: { persistAuthorization: true },
-  });
 
-  app.enableCors();
-  await app.listen(3002); // Portni 3002 qilamiz chunki 3000 va 3001 band
-  console.log('🚀 Movie Marketplace: http://localhost:3002');
+  SwaggerModule.setup('docs', app, document);
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/docs`);
 }
 bootstrap();
+

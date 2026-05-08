@@ -17,24 +17,24 @@ export class MoviesService {
       if (query.minPrice) filter.price.$gte = query.minPrice;
       if (query.maxPrice) filter.price.$lte = query.maxPrice;
     }
-    return this.movieModel.find(filter).populate('sellerId', 'fullName email').sort({ createdAt: -1 }).exec();
+    return this.movieModel.find(filter).populate('seller', 'fullName email').sort({ createdAt: -1 }).exec();
   }
 
   async findOne(id: string) {
-    const movie = await this.movieModel.findById(id).populate('sellerId', 'fullName email').exec();
+    const movie = await this.movieModel.findById(id).populate('seller', 'fullName email').exec();
     if (!movie) throw new NotFoundException('Kino topilmadi');
     return movie;
   }
 
   async create(data: any, user: any) {
-    const newMovie = new this.movieModel({ ...data, sellerId: user.sub });
+    const newMovie = new this.movieModel({ ...data, seller: user.sub });
     return newMovie.save();
   }
 
   async update(id: string, data: any, user: any) {
     const movie = await this.movieModel.findById(id);
     if (!movie) throw new NotFoundException('Kino topilmadi');
-    if (user.role !== Role.ADMIN && movie.sellerId.toString() !== user.sub) {
+    if (user.role !== Role.ADMIN && movie.seller.toString() !== user.sub) {
       throw new ForbiddenException('Ruxsat yo\'q');
     }
     return this.movieModel.findByIdAndUpdate(id, data, { new: true }).exec();
@@ -43,10 +43,11 @@ export class MoviesService {
   async remove(id: string, user: any) {
     const movie = await this.movieModel.findById(id);
     if (!movie) throw new NotFoundException('Kino topilmadi');
-    if (user.role !== Role.ADMIN && movie.sellerId.toString() !== user.sub) {
+    if (user.role !== Role.ADMIN && movie.seller.toString() !== user.sub) {
       throw new ForbiddenException('Ruxsat yo\'q');
     }
     await this.movieModel.findByIdAndDelete(id).exec();
     return { success: true, message: "Kino o'chirildi" };
+
   }
 }

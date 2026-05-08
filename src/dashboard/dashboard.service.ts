@@ -30,15 +30,16 @@ export class DashboardService {
   }
 
   async getSellerStats(sellerId: string) {
-    const myMovies = await this.movieModel.find({ sellerId }).select('_id');
+    const myMovies = await this.movieModel.find({ seller: sellerId }).select('_id');
     const movieIds = myMovies.map(m => m._id);
     const [count, sales] = await Promise.all([
-      this.movieModel.countDocuments({ sellerId }),
+      this.movieModel.countDocuments({ seller: sellerId }),
       this.orderModel.aggregate([
         { $match: { movieId: { $in: movieIds } } },
         { $group: { _id: null, revenue: { $sum: '$amount' }, count: { $sum: 1 } } }
       ]),
     ]);
+
     return {
       myMoviesCount: count,
       myRevenue: sales[0]?.revenue || 0,
